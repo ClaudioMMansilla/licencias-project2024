@@ -1,0 +1,236 @@
+package guiaTransporte;
+
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
+import javax.swing.JOptionPane;
+import Servicios.Services;
+import fecha.Fecha;
+import mapManager.MapManager;
+import modelos.FleteExpreso;
+import modelos.GuiaTransporte;
+import modelos.HojaDeRuta;
+import modelos.Pedido;
+
+public class Guiatransporte_Controller{
+
+	private HojaDeRuta roadmap;
+	private HashMap<Integer, Integer> mapGuias;
+	private Guiatransporte_View view;
+	private static String[] flete = {"A CARGO DEL CLIENTE", "FLETE PAGO EN ORIGEN"};
+	
+
+	public Guiatransporte_Controller(HojaDeRuta roadmapParam) {
+		this.roadmap = roadmapParam;
+		this.mapGuias = new HashMap<Integer, Integer>();
+		
+		Object[][] data = new Object[roadmap.getPedidosList().size()][4];
+
+		//view = new Guiatransporte_View(data);
+		view = new Guiatransporte_View(GuiaTransporte.ConvertArraylistToMatrix(roadmapParam));
+		view.button.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				FilterListByCheckbox(roadmapParam);
+			}
+		});
+	}
+
+
+	public static GuiaTransporte selectFromDBWhereIdguia(ResultSet rs) {
+		GuiaTransporte guia = new GuiaTransporte();
+		if(rs != null) {
+			try {
+				while(rs.next()) {
+					guia.setIdGuia(rs.getInt("idGuia"));
+					guia.setEmtpy(false);
+				}
+
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return guia;
+	}
+
+
+	public static GuiaTransporte getNextNumGuiaFromDB(HojaDeRuta hojaRuta, int idCliente, Connection cn) {
+		GuiaTransporte guia = new GuiaTransporte();
+
+		String querySelect = ""
+				+ "SELECT idGuia "
+				+ "FROM "+Services.url_reg_guiastransporte+" "
+				+ "WHERE idCliente= "+idCliente+" AND FK_idHojaRuta = "+hojaRuta.getHojaRutaID()+" ";
+
+		try {
+			cn.setAutoCommit(false); // Deshabilitar auto commit para usar transacción
+			PreparedStatement enviaConsulta;
+			enviaConsulta = cn.prepareStatement(querySelect);
+			guia = selectFromDBWhereIdguia(enviaConsulta.executeQuery());
+
+			if(guia.isEmtpy()) {
+				guia = Guiatransporte_Controller.getProxNumGuiaFromDB(cn);
+			}
+			
+			guia = Guiatransporte_Controller.getCostumerInformationFromDB(idCliente, guia);
+
+			cn.commit(); 
+			cn.close();
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			JOptionPane.showMessageDialog(null, "Error, selectNumGuiaFromDB: "+ e);
+		}
+		return guia;
+	}
+
+
+	public static GuiaTransporte getProxNum(ResultSet rs) {
+		GuiaTransporte guia = new GuiaTransporte();
+		if(rs != null) {
+			try {
+				while(rs.next()) {
+					guia.setIdGuia(rs.getInt("proximoNro"));
+					guia.setTotalNeto(BigDecimal.ZERO);
+					guia.setTotalCantidad(0);
+				}
+
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return guia;
+	}
+
+
+	public static GuiaTransporte getProxNumGuiaFromDB(Connection cn) {
+		GuiaTransporte guia = new GuiaTransporte();
+		String querySelect = "SELECT proximoNro FROM "+Services.url_contadorGuiaTte+" ";
+
+		try {
+			PreparedStatement enviaConsulta;
+			enviaConsulta = cn.prepareStatement(querySelect);
+			guia = getProxNum(enviaConsulta.executeQuery());
+		} catch (SQLException e) {
+			e.printStackTrace();
+			JOptionPane.showMessageDialog(null, "Error, getProxNumGuiaFromDB: "+ e);
+		}
+		return guia;
+	}
+	
+	private void FilterListByCheckbox(HojaDeRuta hojaRuta) 
+	{    	
+		for (int row = 0; row < view.table.getRowCount(); row++) {
+			GuiaTransporte guiaLocal = new GuiaTransporte(0, hojaRuta.getHojaRutaID());
+			guiaLocal.setExpreso(new FleteExpreso(flete[0]));
+			
+			Boolean emitirGuia = (Boolean) view.table.getValueAt(row, 1);
+			Boolean sinFlete = (Boolean) view.table.getValueAt(row, 2);
+			if (emitirGuia != null && emitirGuia) {
+				for(Pedido pedido: hojaRuta.getPedidosList()) {
+					if(pedido.getRazonSocial().equalsIgnoreCase(view.table.getValueAt(row, 0).toString())) {
+						guiaLocal = Guiatransporte_Controller.getNextNumGuiaFromDB(
+								roadmap, 
+								Fecha.parserStringToInt(pedido.getIdCliente()), 
+								Servicios.Services.abrirConexionStatic()
+								);
+						
+						
+						if (sinFlete != null && sinFlete) {
+							guiaLocal.setExpreso(new FleteExpreso(flete[1]));
+						}
+						mapGuias = MapManager.putGuiaClienteIntoMap(
+								mapGuias, 
+								guiaLocal.getIdGuia(), 
+								Fecha.parserStringToInt(pedido.getIdCliente())
+								);
+					}
+					
+				}
+				System.out.println("flete paga: "+guiaLocal.getExpreso().getFleteCondicion());
+				System.out.println("Soy guia: "+guiaLocal.getIdGuia());
+				System.out.println("Size: "+mapGuias.size());
+			}    
+		} 
+	}
+	
+	private static String querySelectMSSQL(int idCostumer) {
+//		String queryZ = "SELECT dbo.Ventas.VentasID, "
+//				+ "dbo.Ventas.NroDeRemito, "
+//				+ "dbo.Ventas.Fecha, "
+//				+ "dbo.Ventas.[Razon Social], "
+//				+ "dbo.Ventas.TiposDeDocumentosFiscalID, "
+//				+ "dbo.Ventas.NetoNoGrabado, "
+//				+ "dbo.Ventas.EstadoVentasID, "
+//				+ "dbo.Clientes.Codigo "
+//				+ "FROM dbo.Ventas "
+//				+ "JOIN dbo.Clientes ON dbo.Ventas.ClientesID = dbo.Clientes.ClientesID "
+//				+ "WHERE dbo.Ventas.TiposDeDocumentosFiscalID = 5 AND dbo.Ventas.NroDeRemito = '"+nroRemito+"' "
+//				+ "ORDER BY dbo.Ventas.VentasID";
+		
+		String query = "SELECT "
+				+ "dbo.[Clientes].[Razon Social], "
+				+ "dbo.[Clientes].[Domicilio], "
+				+ "dbo.[Clientes].[Localidad], "
+				+ "dbo.[Clientes].[Provincia], "
+				+ "dbo.[Clientes].[Cuit], "
+				+ "dbo.[Clientes].[TipoIva], "
+				+ "dbo.[Clientes].[Telefono], "
+				+ "dbo.[Clientes].[TransporteProveedoresID], "
+				+ "dbo.[Proveedores].[Razon Social], "
+				+ "dbo.[Proveedores].[Domicilio], "
+				+ "dbo.[Proveedores].[Localidad], "
+				+ "dbo.[Proveedores].[CUIT], "
+				+ "dbo.[Proveedores].[Tel. Laboral] "
+				+ "FROM [Licencias2021].[dbo].[Clientes]  "
+				+ "JOIN [dbo].[Proveedores].[ProveedoresID] = [dbo].[Clientes].[Codigo] "
+				+ "WHERE [Licencias2021].[dbo].[Clientes].[Codigo]="+idCostumer+" ";
+
+		return query;
+	}
+	
+	public static GuiaTransporte getCostumerInformationFromDB(int idCostumer, GuiaTransporte guia) 
+	{
+		guia = Guiatransporte_Controller.setCostumerInformation(
+				Services.getResulSetMSSQL(Guiatransporte_Controller.querySelectMSSQL(idCostumer)), 
+				guia);
+		
+		return guia;
+	}
+	
+	public static GuiaTransporte setCostumerInformation(ResultSet rs, GuiaTransporte guia) 
+	{
+		if(rs != null) {
+			try {
+				while(rs.next()) {
+					guia.setRazonSocial(rs.getString("[Razon Social]"));
+					guia.setDireccion(rs.getString("[Domicilio]"));
+					guia.setLocalidad(rs.getString("[Localidad]"));
+					guia.setProvincia(rs.getString("[Provincia]"));
+					guia.setCuit(rs.getString("[Cuit]"));
+					guia.setIva(rs.getString("[TipoIva]"));
+					guia.setTelefono(rs.getString("[Telefono]"));
+					guia.getExpreso().setFleteID(rs.getInt("[TransporteProveedoresID]"));
+					guia.getExpreso().setFleteExpreso(rs.getString("[Razon Social]"));
+					guia.getExpreso().setFleteDireccion(rs.getString("[Domicilio]"));
+					guia.getExpreso().setFleteLocalidad(rs.getString("[Localidad]"));
+					guia.getExpreso().setFleteCuit(rs.getString("[CUIT]"));
+					guia.getExpreso().setFleteTelefono(rs.getString("[Tel. Laboral]"));
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return guia;
+	}
+	
+	
+
+}
+
+

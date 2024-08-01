@@ -1,0 +1,44 @@
+	package conector;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+import javax.swing.JOptionPane;
+
+public class Conexion {
+
+	private static final String CONTROLADOR = "com.mysql.cj.jdbc.Driver";
+	//private static final String url = "jdbc:mysql://192.168.100.69:3306/pruebas_2022?serverTimezone=UTC"; //cambio "dbase?"
+	private static final String url = "jdbc:mysql://SERVIDOR_SQL:3306/pruebas_2022?serverTimezone=America/Buenos_Aires";
+	private static final String usuario = "remoto";
+	private static final String password = "remoto";
+
+	static
+	{
+		try
+		{
+			Class.forName(CONTROLADOR);
+
+		} catch (ClassNotFoundException e) {
+			System.out.println("Error al cargar el controlador");
+			e.printStackTrace();
+			JOptionPane.showMessageDialog(null, e);
+		}
+	}
+
+	public Connection Conectar() {
+		Connection conexion = null;
+
+	try {
+		conexion = DriverManager.getConnection(url, usuario, password);
+		System.out.println("Conexion establecida MySQL");
+
+		} catch (SQLException e) {
+		e.printStackTrace();
+		JOptionPane.showMessageDialog(null, "Error obteniendo conexión, verifique conexión pc actual o del servidor");
+		}
+	return conexion;
+	}
+}
+
+

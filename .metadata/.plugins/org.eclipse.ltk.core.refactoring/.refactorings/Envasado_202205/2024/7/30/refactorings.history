@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename method &apos;guiaTransporte.Guiatransporte_Controller.getProxNumGuiaFromDB(...)&apos; to &apos;generateNumGuiaFromDB&apos;&#x0D;&#x0A;- Original project: &apos;Envasado_202205&apos;&#x0D;&#x0A;- Original element: &apos;guiaTransporte.Guiatransporte_Controller.getProxNumGuiaFromDB(...)&apos;&#x0D;&#x0A;- Renamed element: &apos;guiaTransporte.Guiatransporte_Controller.generateNumGuiaFromDB(...)&apos;&#x0D;&#x0A;- Update references to refactored element" delegate="false" deprecate="false" description="Rename method &apos;getProxNumGuiaFromDB&apos;" flags="589830" id="org.eclipse.jdt.ui.rename.method" input="/src&lt;guiaTransporte{Guiatransporte_Controller.java[Guiatransporte_Controller~getProxNumGuiaFromDB~QConnection;" name="generateNumGuiaFromDB" references="true" stamp="1721826084493" version="1.0"/>
+</session>

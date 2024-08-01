@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+    <fullyQualifiedTypeName name="java.awt.FlowLayout"/>
+    <fullyQualifiedTypeName name="java.awt.Color"/>
+    <fullyQualifiedTypeName name="groovy.ui.SystemOutputInterceptor"/>
+    <fullyQualifiedTypeName name="modelos.GuiaTransporte"/>
+    <fullyQualifiedTypeName name="Servicios.Services"/>
+    <fullyQualifiedTypeName name="fecha.Fecha"/>
+    <fullyQualifiedTypeName name="guiaTransporte.Guiatransporte_Controller"/>
+    <fullyQualifiedTypeName name="hojaDeRuta.HojaDeRuta_Controller"/>
+    <fullyQualifiedTypeName name="reportes.PrintGuiatte"/>
+    <fullyQualifiedTypeName name="java.lang.System"/>
+</qualifiedTypeNameHistroy>
